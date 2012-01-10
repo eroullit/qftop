@@ -38,6 +38,9 @@ static int dump_cb(enum nf_conntrack_msg_type type,
 	unsigned int op_type = NFCT_O_DEFAULT;
 	unsigned int op_flags = NFCT_OF_SHOW_LAYER3 | NFCT_OF_ID;
 	
+	type = type;
+	data = data;
+	
 	nfct_snprintf(buf, sizeof(buf), ct, NFCT_T_UNKNOWN, op_type, op_flags);
 	printf("%s\n", buf);
 
