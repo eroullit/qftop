@@ -42,13 +42,20 @@ static int dump_cb(enum nf_conntrack_msg_type type,
 		   struct nf_conntrack *ct,
 		   void *data)
 {
+	int a;
 	char buf[1024];
 	unsigned int op_type = NFCT_O_DEFAULT;
 	unsigned int op_flags = NFCT_OF_SHOW_LAYER3 | NFCT_OF_ID;
 	
 	type = type;
 	data = data;
-	
+
+	for (a = 0; a < ATTR_MAX; a++) {
+		if (a == ATTR_IPV4_SRC || a == ATTR_IPV4_DST)
+			continue;
+		nfct_attr_unset(ct, a);
+	}
+
 	nfct_snprintf(buf, sizeof(buf), ct, NFCT_T_UNKNOWN, op_type, op_flags);
 	printf("%s\n", buf);
 
