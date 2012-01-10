@@ -21,6 +21,14 @@
 
  /* __LICENSE_HEADER_END__ */
 
+ /*
+ * Debian: apt-get install libnetfilter-conntrack3 libnetfilter-conntrack-dev
+ *
+ * Start conntrack (if not yet running):
+ *   iptables -A INPUT -p tcp -m state --state ESTABLISHED -j ACCEPT
+ *   iptables -A OUTPUT -p tcp -m state --state NEW,ESTABLISHED -j ACCEPT
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
