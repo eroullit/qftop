@@ -39,12 +39,32 @@
 #include <GeoIP.h>
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 #include <libnetfilter_conntrack/libnetfilter_conntrack_tcp.h>
+#include <curses.h>
+
+struct show_data
+{
+	WINDOW * screen;
+	GeoIP *country_db;
+};
+
+static WINDOW * screen_init()
+{
+	WINDOW * screen = initscr();
+	noecho();
+	cbreak();
+	keypad(stdscr, TRUE);
+	nodelay(screen, TRUE);
+	refresh();
+	wrefresh(screen);
+
+	return screen;
+}
 
 static int dump_cb(enum nf_conntrack_msg_type type,
 	struct nf_conntrack *ct,
 	void *data)
 {
-	GeoIP *country_db = data;
+	struct show_data *show = data;
 	struct in_addr src_ip, dst_ip;
 	const char *src_country = NULL, *dst_country = NULL;
 
@@ -55,22 +75,25 @@ static int dump_cb(enum nf_conntrack_msg_type type,
 	src_ip.s_addr = nfct_get_attr_u32(ct, ATTR_IPV4_SRC);
 	dst_ip.s_addr = nfct_get_attr_u32(ct, ATTR_IPV4_DST);
 
-	src_country = GeoIP_country_name_by_ipnum(country_db, src_ip.s_addr);
-	dst_country = GeoIP_country_name_by_ipnum(country_db, dst_ip.s_addr);
+	src_country = GeoIP_country_name_by_ipnum(show->country_db, src_ip.s_addr);
+	dst_country = GeoIP_country_name_by_ipnum(show->country_db, dst_ip.s_addr);
 
-	printf("src: %s:%u ", inet_ntoa(src_ip), nfct_get_attr_u16(ct, ATTR_PORT_SRC));
-	printf("(%s) ", src_country ? src_country : "N/A");
-	printf("dst: %s:%u ", inet_ntoa(dst_ip), nfct_get_attr_u16(ct, ATTR_PORT_DST));
-	printf("(%s) ", dst_country ? dst_country : "N/A");
+	wprintw(show->screen, "src: %s:%u ", inet_ntoa(src_ip), nfct_get_attr_u16(ct, ATTR_PORT_SRC));
+	wprintw(show->screen, "(%s) ", src_country ? src_country : "N/A");
+	wprintw(show->screen, "dst: %s:%u ", inet_ntoa(dst_ip), nfct_get_attr_u16(ct, ATTR_PORT_DST));
+	wprintw(show->screen, "(%s) ", dst_country ? dst_country : "N/A");
 
-	printf("\n");
+	wprintw(show->screen, "\n");
+
+	wrefresh(show->screen);
+	refresh();
 
 	return NFCT_CB_CONTINUE;
 }
 
 int main(int argc, char** argv)
 {
-	GeoIP *country_db = NULL;
+	struct show_data show;
 	struct nfct_handle *cth = NULL;
 	uint32_t af = AF_INET;
 	int res = 0;
@@ -78,9 +101,16 @@ int main(int argc, char** argv)
 	assert(argc);
 	assert(argv);
 
-	country_db = GeoIP_new(GEOIP_STANDARD);
+	memset(&show, 0, sizeof(show));
 
-	if (!country_db)
+	show.screen = screen_init();
+
+	if (!show.screen)
+		perror("Can't init screen");
+
+	show.country_db = GeoIP_new(GEOIP_STANDARD);
+
+	if (!show.country_db)
 		perror("Can't open GeoIP database");
 
 	cth = nfct_open(CONNTRACK, 0);
@@ -88,7 +118,7 @@ int main(int argc, char** argv)
 	if (!cth)
 		perror("Can't open handler");
 
-	res = nfct_callback_register(cth, NFCT_T_ALL, dump_cb, country_db);
+	res = nfct_callback_register(cth, NFCT_T_ALL, dump_cb, &show);
 
 	if (res) {
 		printf("nfct_callback_register failed %s\n", strerror(errno));
@@ -100,9 +130,13 @@ int main(int argc, char** argv)
 	if (res) {
 		printf("conntrack query failed %s\n", strerror(errno));
 	}
+
+	getchar();
+
 out:
 	nfct_close(cth);
-	GeoIP_delete(country_db);
+	GeoIP_delete(show.country_db);
+	endwin();
 
 	return(!!res);
 }
