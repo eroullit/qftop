@@ -51,8 +51,8 @@ static int dump_cb(enum nf_conntrack_msg_type type,
 	src_ip.s_addr = nfct_get_attr_u32(ct, ATTR_IPV4_SRC);
 	dst_ip.s_addr = nfct_get_attr_u32(ct, ATTR_IPV4_DST);
 
-	printf("src: %s ", inet_ntoa(src_ip));
-	printf("dst: %s ", inet_ntoa(dst_ip));
+	printf("src: %s:%u ", inet_ntoa(src_ip), nfct_get_attr_u16(ct, ATTR_PORT_SRC));
+	printf("dst: %s:%u ", inet_ntoa(dst_ip), nfct_get_attr_u16(ct, ATTR_PORT_DST));
 
 	printf("\n");
 
