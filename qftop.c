@@ -36,6 +36,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 
+#include <GeoIP.h>
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 #include <libnetfilter_conntrack/libnetfilter_conntrack_tcp.h>
 
@@ -43,16 +44,24 @@ static int dump_cb(enum nf_conntrack_msg_type type,
 	struct nf_conntrack *ct,
 	void *data)
 {
+	GeoIP *country_db = data;
 	struct in_addr src_ip, dst_ip;
+	const char *src_country = NULL, *dst_country = NULL;
+
+	assert(data);
 
 	type = type;
-	data = data;
 
 	src_ip.s_addr = nfct_get_attr_u32(ct, ATTR_IPV4_SRC);
 	dst_ip.s_addr = nfct_get_attr_u32(ct, ATTR_IPV4_DST);
 
+	src_country = GeoIP_country_name_by_ipnum(country_db, src_ip.s_addr);
+	dst_country = GeoIP_country_name_by_ipnum(country_db, dst_ip.s_addr);
+
 	printf("src: %s:%u ", inet_ntoa(src_ip), nfct_get_attr_u16(ct, ATTR_PORT_SRC));
+	printf("(%s) ", src_country ? src_country : "N/A");
 	printf("dst: %s:%u ", inet_ntoa(dst_ip), nfct_get_attr_u16(ct, ATTR_PORT_DST));
+	printf("(%s) ", dst_country ? dst_country : "N/A");
 
 	printf("\n");
 
@@ -61,6 +70,7 @@ static int dump_cb(enum nf_conntrack_msg_type type,
 
 int main(int argc, char** argv)
 {
+	GeoIP *country_db = NULL;
 	struct nfct_handle *cth = NULL;
 	uint32_t af = AF_INET;
 	int res = 0;
@@ -68,12 +78,17 @@ int main(int argc, char** argv)
 	assert(argc);
 	assert(argv);
 
+	country_db = GeoIP_new(GEOIP_STANDARD);
+
+	if (!country_db)
+		perror("Can't open GeoIP database");
+
 	cth = nfct_open(CONNTRACK, 0);
 
 	if (!cth)
 		perror("Can't open handler");
 
-	res = nfct_callback_register(cth, NFCT_T_ALL, dump_cb, NULL);
+	res = nfct_callback_register(cth, NFCT_T_ALL, dump_cb, country_db);
 
 	if (res) {
 		printf("nfct_callback_register failed %s\n", strerror(errno));
@@ -87,6 +102,7 @@ int main(int argc, char** argv)
 	}
 out:
 	nfct_close(cth);
+	GeoIP_delete(country_db);
 
 	return(!!res);
 }
