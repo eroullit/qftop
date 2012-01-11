@@ -19,9 +19,9 @@
  *
  */
 
- /* __LICENSE_HEADER_END__ */
+/* __LICENSE_HEADER_END__ */
 
- /*
+/*
  * Debian: apt-get install libnetfilter-conntrack3 libnetfilter-conntrack-dev
  *
  * Start conntrack (if not yet running):
@@ -34,30 +34,27 @@
 #include <errno.h>
 #include <assert.h>
 #include <string.h>
+#include <arpa/inet.h>
 
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 #include <libnetfilter_conntrack/libnetfilter_conntrack_tcp.h>
 
 static int dump_cb(enum nf_conntrack_msg_type type,
-		   struct nf_conntrack *ct,
-		   void *data)
+	struct nf_conntrack *ct,
+	void *data)
 {
-	int a;
-	char buf[1024];
-	unsigned int op_type = NFCT_O_DEFAULT;
-	unsigned int op_flags = NFCT_OF_SHOW_LAYER3 | NFCT_OF_ID;
-	
+	struct in_addr src_ip, dst_ip;
+
 	type = type;
 	data = data;
 
-	for (a = 0; a < ATTR_MAX; a++) {
-		if (a == ATTR_IPV4_SRC || a == ATTR_IPV4_DST)
-			continue;
-		nfct_attr_unset(ct, a);
-	}
+	src_ip.s_addr = nfct_get_attr_u32(ct, ATTR_IPV4_SRC);
+	dst_ip.s_addr = nfct_get_attr_u32(ct, ATTR_IPV4_DST);
 
-	nfct_snprintf(buf, sizeof(buf), ct, NFCT_T_UNKNOWN, op_type, op_flags);
-	printf("%s\n", buf);
+	printf("src: %s ", inet_ntoa(src_ip));
+	printf("dst: %s ", inet_ntoa(dst_ip));
+
+	printf("\n");
 
 	return NFCT_CB_CONTINUE;
 }
@@ -67,17 +64,17 @@ int main(int argc, char** argv)
 	struct nfct_handle *cth = NULL;
 	uint32_t af = AF_INET;
 	int res = 0;
-	
+
 	assert(argc);
 	assert(argv);
 
 	cth = nfct_open(CONNTRACK, 0);
-	
+
 	if (!cth)
 		perror("Can't open handler");
 
 	res = nfct_callback_register(cth, NFCT_T_ALL, dump_cb, NULL);
-	
+
 	if (res) {
 		printf("nfct_callback_register failed %s\n", strerror(errno));
 		goto out;
