@@ -1,0 +1,8 @@
+qftop is a PoC of a tool which print current connection information
+
+To build it, you will need these libraries installed:
+	- libnetfilter_conntrack
+	- libGeoIP
+	- libncurses
+
+Then invoke "make" and you are done.
