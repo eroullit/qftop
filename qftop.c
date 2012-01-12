@@ -75,8 +75,8 @@ static int dump_cb(enum nf_conntrack_msg_type type,
 	src_ip.s_addr = nfct_get_attr_u32(ct, ATTR_IPV4_SRC);
 	dst_ip.s_addr = nfct_get_attr_u32(ct, ATTR_IPV4_DST);
 
-	src_country = GeoIP_country_name_by_ipnum(show->country_db, src_ip.s_addr);
-	dst_country = GeoIP_country_name_by_ipnum(show->country_db, dst_ip.s_addr);
+	src_country = GeoIP_country_name_by_ipnum(show->country_db, ntohl(src_ip.s_addr));
+	dst_country = GeoIP_country_name_by_ipnum(show->country_db, ntohl(dst_ip.s_addr));
 
 	wprintw(show->screen, "src: %s:%u ", inet_ntoa(src_ip), nfct_get_attr_u16(ct, ATTR_PORT_SRC));
 	wprintw(show->screen, "(%s) ", src_country ? src_country : "N/A");
