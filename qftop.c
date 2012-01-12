@@ -31,6 +31,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <errno.h>
 #include <assert.h>
 #include <string.h>
@@ -41,8 +42,7 @@
 #include <libnetfilter_conntrack/libnetfilter_conntrack_tcp.h>
 #include <curses.h>
 
-struct show_data
-{
+struct show_data {
 	WINDOW * screen;
 	GeoIP *country_db;
 };
@@ -125,13 +125,19 @@ int main(int argc, char** argv)
 		goto out;
 	}
 
-	res = nfct_query(cth, NFCT_Q_DUMP, &af);
+	while (getch() == ERR) {
+		res = nfct_query(cth, NFCT_Q_DUMP, &af);
 
-	if (res) {
-		printf("conntrack query failed %s\n", strerror(errno));
+		if (res) {
+			printf("conntrack query failed %s\n", strerror(errno));
+			break;
+		}
+
+		wclear(show.screen);
+		clear();
+
+		sleep(1);
 	}
-
-	getchar();
 
 out:
 	nfct_close(cth);
