@@ -1,0 +1,4 @@
+#!/bin/sh
+sudo iptables -A INPUT -p tcp -m state --state ESTABLISHED -j ACCEPT
+sudo iptables -A OUTPUT -p tcp -m state --state NEW,ESTABLISHED -j ACCEPT
+_qftop
